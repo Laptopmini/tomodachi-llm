@@ -15,6 +15,8 @@ Where the project stands, what's planned, and the decisions that shaped it. Date
 - **Local model with the game running** on the same Mac: no frame drops, lines about 50% slower ([model-benchmarks.md](model-benchmarks.md)).
 - Stopping the bridge mid-session and starting it again (2026-10-11, release 0.1.0): the game kept playing its own lines while it was down and rewritten lines came back after the restart. The restarted bridge doesn't know what was written before, so each line's first showing after a restart plays the game's text (or the version the plugin already holds).
 
+**Known issue in release 0.1.0:** choice menus (yes/no prompts, the topic picker, Pixel Quiz) show only their first option; the other buttons stay empty or show `%%%%`. The plugin's text hook didn't pass the game's return value through. Fixed in plugin 0.7.2 (2026-10-11), to be confirmed in a session and released as 0.1.1.
+
 **Not yet verified:**
 - the release plugin settings (`hook/config.release.ini`) in a long session (only ~7 minutes so far)
 - the OpenRouter fallback during play (covered by tests only)

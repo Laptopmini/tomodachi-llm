@@ -95,7 +95,7 @@ Addresses are in Ghidra's NSO layout (base `0x7100000000`); subtract the base fo
 | What | Address | Status |
 |---|---|---|
 | `Msbt_GetTextByLabel(Msbt*, label)` → 24-byte `TextRef` via `x8` | `0x71005abc00` | **runtime: hooked since plugin 0.1.0.** Only sees some lookups: the label hash is inlined in at least 13 other functions |
-| **`Text_Expand`**: template + `MessageParam` → finished UTF-16 line | `0x71001508ac` | **runtime: the central hook.** Every visible line we cared about goes through it: speech balloons, TTS input, captions, the conversation log, the news, UI |
+| **`Text_Expand`**: template + `MessageParam` → finished UTF-16 line | `0x71001508ac` | **runtime: the central hook.** Every visible line we cared about goes through it: speech balloons, TTS input, captions, the conversation log, the news, UI. **It returns a value** (it ends by returning the result of a call to `0x71001519dc`; Ghidra shows it as `void`), and the UI text setter (`0x710045e7cc`, return address `0x710045e924`) passes it on: choice menus showed only their first option when a hook dropped it (2026-10-11) |
 | `Msbt_GetIndexByLabel(header, label)` | `0x71008581f0` | runtime: hooked since 0.6.1. Mostly called by the MessageShuffler, but only 9 distinct labels went through it in a session (10-11) |
 | MessageShuffler (variant pick by attributes) | `0x7101e13258`, `0x7101e13d40`, `0x7101e14b10` | static. Picks a row by attributes and reads it **by row number** (`0x7101e11e00`), with no label lookup |
 | `TagProcessor` ctor / `ProcessTag` | `0x7102108b4c` / `0x710210cb64` | static. `ProcessTag` dispatches tag groups 2, 5, 200 and 201 |
@@ -192,6 +192,7 @@ The working example is `hook/` (C++, devkitA64): its Makefile, linker script `pl
 
 - **Check the game version first.** Compare the first instructions of every function you hook with known bytes, and install nothing on a mismatch (`SigMatches` in `main.cpp`). The game then runs untouched on another version.
 - **Hook code runs on game threads.** Never block, lock, wait or do I/O there. Copy what you need into a lock-free buffer and return. Do the I/O on your own worker thread; ours uses priority 16 on core 0, like Skyline's logger.
+- **Pass the original's return value through, always.** Ghidra's `void` can be wrong: check the end of the function for a call whose result it returns. Our `Text_Expand` hook returned nothing, so the register held whatever the hook's last call left (a 1), and every choice menu (yes/no, the topic picker, Pixel Quiz) showed only its first option. It went unnoticed for days, because only the first option looked normal; buttons the game didn't fill show the layout's placeholder text (`%%%%`). Declare every hook and original as returning `u64` and return the original's value.
 - **Keep hook stack frames small.** Some game threads have small stacks. Our `Text_Expand` hook had about 2.9 KB of local buffers, and the game froze while loading one specific Mii News report; with no other change, a 176-byte frame fixed it. Take large buffers from a preallocated pool (`Scratch` in `main.cpp`), and put work in `noinline` helpers that return before you call the original function.
 - **Keep memory small.** Skyline allocates the plugin's `.bss` from **the game's heap**. Ours stays around 1.2 MB, and 1.8 MB has run fine. (A 3.3 MB build froze at the same Mii News report, but so did a small one, so memory wasn't proven to be the cause; treat growth as risky anyway.)
 - **And64InlineHook** overwrites the first 4-5 instructions of a hooked function, or 1 for a near branch. Check that no branch inside the function targets them.
@@ -237,6 +238,7 @@ How this mod does it is in [how-it-works.md](how-it-works.md); the measurements 
 - **Sockets on Ryujinx:** about 1 s per call, and calls run one at a time. A receiver thread starved the sender. Use files on the SD card.
 - **AI node hooks** (`ScenarioChatSelector`, `SetGroupFocusTelopSelector`, befriend pickers) never fired through the vtable methods we found. Hook the text functions instead.
 - **Reading caption files ahead by label** doesn't work: chat captions are picked by row and attributes, with no label lookup.
+- **A hook that dropped its function's return value** made choice menus show one option (plugins 0.1.1-0.7.1, fixed in 0.7.2).
 - **A large stack frame in a hook** froze the game during one Mii News report. It looked like a memory problem at first; a bisect (no mod: fine; text hook off: fine) found the cause.
 - **A fixed-slot line store** with a direct-mapped table made lines evict each other. Use open addressing with a text arena.
 - **`label` events alone** don't reveal most speech, because the shuffler reads by row.

@@ -42,7 +42,7 @@ s64 Recv(s32 socket, void* buffer, u64 length, s32 flags);  // _ZN2nn6socket4Rec
 
 namespace {
 
-constexpr const char* kVersion = "0.7.1";
+constexpr const char* kVersion = "0.7.2";
 constexpr u64 kGhidraBase = 0x7100000000;
 
 // Game 1.0.4 offsets from main's base (re/offsets.md), and the first four instruction words
@@ -652,7 +652,10 @@ tomodachi_llm::RelineStore<4096, 256 * 1024, kRelineBytes> g_relines;
 u32 g_relinesUsed = 0;
 u32 g_relinesBad = 0;
 
-using TextExpandFn = void (*)(void*, u16*, u32*, void*, u64, const u16*, u64, u64, u64, void*, u8*);
+// Text_Expand returns a value (it ends by returning another call's result; Ghidra shows it as void). The UI text
+// setter at 0x710045e924 uses it (choice menus: without it they show only their first option). Every hook passes
+// its original's return value through, as u64, even where the function looks void.
+using TextExpandFn = u64 (*)(void*, u16*, u32*, void*, u64, const u16*, u64, u64, u64, void*, u8*);
 TextExpandFn g_origTextExpand = nullptr;
 
 // The generated replacement for this template into `alt` (640 units) from the store, via `text` (kRelineBytes).
@@ -676,7 +679,7 @@ __attribute__((noinline)) void LogLine(u64 lr, u64 key, u32 altLen, u16* dst, u3
 
 // Text_Expand: kept small on the stack (see Scratch): the buffers come from the pool, the event is written after
 // the game's call returns.
-void HookTextExpand(void* proc, u16* dst, u32* outLen, void* p4, u64 dstCap, const u16* src, u64 srcLen, u64 p8,
+u64 HookTextExpand(void* proc, u16* dst, u32* outLen, void* p4, u64 dstCap, const u16* src, u64 srcLen, u64 p8,
                     u64 p9, void* p10, u8* mp) {
     u64 lr = (u64)__builtin_return_address(0);
     u32 sl = (u32)srcLen;
@@ -686,11 +689,10 @@ void HookTextExpand(void* proc, u16* dst, u32* outLen, void* p4, u64 dstCap, con
     Scratch buf;  // 640 units of template, then kRelineBytes of text
     u16* alt = (u16*)buf.p;
     if (key && g_cfg.reline && buf.p) altLen = PrepareReline(src, sl, key, alt, buf.p + 1280);
-    if (altLen)
-        g_origTextExpand(proc, dst, outLen, p4, dstCap, alt, altLen, p8, p9, p10, mp);
-    else
-        g_origTextExpand(proc, dst, outLen, p4, dstCap, src, srcLen, p8, p9, p10, mp);
+    u64 ret = altLen ? g_origTextExpand(proc, dst, outLen, p4, dstCap, alt, altLen, p8, p9, p10, mp)
+                     : g_origTextExpand(proc, dst, outLen, p4, dstCap, src, srcLen, p8, p9, p10, mp);
     LogLine(lr, key, altLen, dst, outLen, dstCap, src, sl, mp);
+    return ret;
 }
 
 void LogLine(u64 lr, u64 key, u32 altLen, u16* dst, u32* outLen, u64 dstCap, const u16* src, u32 sl, u8* mp) {
@@ -788,15 +790,16 @@ Ret16 HookChatCalc(u8* node) {
 }
 
 // ScenarioChatSelector per-step method: logs which child it is on (identical events within 3 s are deduplicated).
-void (*g_origChatStep)(u8* node, void* ctx) = nullptr;
-void HookChatStep(u8* node, void* ctx) {
+u64 (*g_origChatStep)(u8* node, void* ctx) = nullptr;
+u64 HookChatStep(u8* node, void* ctx) {
     u8 before = node[0x1e];
-    g_origChatStep(node, ctx);
+    u64 ret = g_origChatStep(node, ctx);
     char body[200];
     Out o{body, sizeof(body)};
     o.Printf("\"t\":\"chat_step\",\"node\":\"0x%llx\",\"child\":%d,\"after\":%d,\"turn\":%d,\"turns\":%d",
              (unsigned long long)node, before, node[0x1e], *(s32*)(node + 0x84), *(s32*)(node + 0x88));
     Emit(body, o.n);
+    return ret;
 }
 
 // SetGroupFocusTelopSelector enter: the caption's mstxt file (node+0x70 -> slot -> const char*) and message
@@ -842,11 +845,11 @@ void PutBbString(Out& o, const u8* node, u32 off, const char* key) {
 // "Help me befriend X" conversation (Trouble FriendUgc): the query that picks the conversation pattern. Its
 // outputs name the whole conversation: DemoForkStrMain (Success/Failure/...), DemoForkStrSub1 (genre),
 // DemoForkStrSub2 (pattern number). The prefetch point for these conversations.
-void (*g_origFriendUgcPick)(u8* node) = nullptr;
-void HookFriendUgcPick(u8* node) {
-    g_origFriendUgcPick(node);
+u64 (*g_origFriendUgcPick)(u8* node) = nullptr;
+u64 HookFriendUgcPick(u8* node) {
+    u64 ret = g_origFriendUgcPick(node);
     Scratch body;
-    if (!body.p) return;
+    if (!body.p) return ret;
     Out o{body.p, 400};
     o.Printf("\"t\":\"friend_ugc\",\"genre_id\":%d,\"fork_id\":%d", *(s32*)(node + 0x28), *(s32*)(node + 0x2c));
     if (const s32* attr = BbValue<s32>(node, 0x40)) o.Printf(",\"attr\":%d", *attr);
@@ -854,6 +857,7 @@ void HookFriendUgcPick(u8* node) {
     PutBbString(o, node, 0x58, "genre");
     PutBbString(o, node, 0x60, "pattern");
     Emit(body.p, o.n);
+    return ret;
 }
 
 // Per-line label of that conversation (called by TroubleFriendUgcTalkSelector as it advances).
@@ -861,9 +865,9 @@ struct StrBuf {
     char* p;
     s32 cap;
 };
-void (*g_origFriendUgcLineLabel)(void*, StrBuf*, u64, s32, u32, u32) = nullptr;
-void HookFriendUgcLineLabel(void* self, StrBuf* buf, u64 genre, s32 outcome, u32 pattern, u32 line) {
-    g_origFriendUgcLineLabel(self, buf, genre, outcome, pattern, line);
+u64 (*g_origFriendUgcLineLabel)(void*, StrBuf*, u64, s32, u32, u32) = nullptr;
+u64 HookFriendUgcLineLabel(void* self, StrBuf* buf, u64 genre, s32 outcome, u32 pattern, u32 line) {
+    u64 ret = g_origFriendUgcLineLabel(self, buf, genre, outcome, pattern, line);
     char body[300];
     Out o{body, sizeof(body)};
     o.Printf("\"t\":\"friend_line\",\"genre_id\":%u,\"outcome_id\":%d,\"pattern\":%u,\"line\":%u", (u32)genre,
@@ -874,6 +878,7 @@ void HookFriendUgcLineLabel(void* self, StrBuf* buf, u64 genre, s32 outcome, u32
         o.Put('"');
     }
     Emit(body, o.n);
+    return ret;
 }
 
 bool SigMatches(u64 off, const u32 (&sig)[4]) {
