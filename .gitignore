@@ -1,0 +1,71 @@
+# --- Game files: never commit (see CLAUDE.md rule 1) ---
+*.nso
+*.nro
+*.nca
+*.nsp
+*.nsz
+*.xci
+*.xcz
+*.keys
+*.npdm
+subsdk*
+romfs/
+exefs/
+dumps/
+*.msbt
+*.msbp
+*.msbf
+*.sarc
+*.zs
+*.byml
+*.bgyml
+*.ainb
+*.bfres
+*.bntx
+*.bwav
+*.bars
+*.vtdb2
+*.rsizetable
+*.elf
+*.sav
+
+# --- Ghidra projects ---
+*.gpr
+*.rep/
+*.lock~
+
+# --- Secrets / local config ---
+.env
+.env.*
+config.toml
+!config.example.toml
+
+# --- Build outputs ---
+hook/build/
+build/
+deploy/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# --- OS / editor ---
+.DS_Store
+.vscode/
+.idea/
+
+# OpenRouter spend total (bridge/spend.py)
+openrouter-spend.json
+openrouter-spend.json.tmp
+bridge/logs/
+bridge/lines.json
+bridge/lines.json.tmp
+dist/
+
+# Private working notes: kept outside the repo, never committed
+/todo.md
+/PROJECT_PLAN.md
