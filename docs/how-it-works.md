@@ -90,7 +90,7 @@ The plugin keeps generated lines in `RelineStore` (`hook/src/relinestore.h`): 4,
 | `backends/openai_compat.py` | One client for LM Studio and OpenRouter (OpenAI-compatible `/chat/completions`, JSON-schema output) |
 | `backends/mock.py` | Canned answers for tests and for running without a model |
 | `prompts/builder.py` | The system prompt and the per-request message |
-| `validator.py` | Checks for every generated line: one line, plain text, no markup or emoji, length limit |
+| `validator.py` | Checks for every generated line: one line, plain text, no markup, no emoji or symbols unless the game's own line has them (♪ in songs), length limit |
 | `store.py` | Generated lines kept between sessions (`lines.json`) |
 | `spend.py` | OpenRouter spend cap: adds up each call's cost in a file |
 | `config.py` | Reads `config.toml`, picks the backends |

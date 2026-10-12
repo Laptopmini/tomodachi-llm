@@ -4,7 +4,7 @@ Where the project stands, what's planned, and the decisions that shaped it. Date
 
 ## Status
 
-**Release 0.1.0** (plugin 0.7.1, bridge 0.7.3) works on **Ryujinx (Ryubing) Canary 1.3.351 on macOS (Apple silicon)** with game **1.0.4** in English. Confirmed in the game:
+**Release 0.1.1** (plugin 0.7.2, bridge 0.7.4) works on **Ryujinx (Ryubing) Canary 1.3.351 on macOS (Apple silicon)** with game **1.0.4** in English. Confirmed in the game:
 - Mii speech lines are rewritten after their first showing, including lines of several balloons. Each repeat gets a fresh version.
 - Narrator captions are rewritten after their first showing.
 - Generated lines are kept between sessions and play rewritten from their first showing.
@@ -15,7 +15,7 @@ Where the project stands, what's planned, and the decisions that shaped it. Date
 - **Local model with the game running** on the same Mac: no frame drops, lines about 50% slower ([model-benchmarks.md](model-benchmarks.md)).
 - Stopping the bridge mid-session and starting it again (2026-10-11, release 0.1.0): the game kept playing its own lines while it was down and rewritten lines came back after the restart. The restarted bridge doesn't know what was written before, so each line's first showing after a restart plays the game's text (or the version the plugin already holds).
 
-**Known issue in release 0.1.0:** choice menus (yes/no prompts, the topic picker, Pixel Quiz) show only their first option; the other buttons stay empty or show `%%%%`. The plugin's text hook didn't pass the game's return value through. Fixed in plugin 0.7.2 (2026-10-11), to be confirmed in a session and released as 0.1.1.
+**Fixed in 0.1.1:** in release 0.1.0, choice menus (yes/no prompts, the topic picker, Pixel Quiz) showed only their first option, with the other buttons empty or showing `%%%%`: the plugin's text hook didn't pass the game's return value through. Plugin 0.7.2 does; confirmed in a session on 2026-10-11 (a yes/no prompt and a four-option menu built all their options). Also in 0.1.1: songs (lines with ♪) are rewritten too; the bridge used to reject the symbol.
 
 **Not yet verified:**
 - the release plugin settings (`hook/config.release.ini`) in a long session (only ~7 minutes so far)
@@ -120,5 +120,6 @@ This would let first showings be generated too. None of the hold points has been
 | 10-11 | The live test of the OpenRouter fallback was skipped | Covered by tests; the owner chose not to spend on it |
 | 10-11 | Single-Mii captions that miss their subject's name are the game's own behavior | The owner saw them before the mod rewrote anything; the name is left out when the camera is on that Mii |
 | 10-11 | Renamed to **Tomodachi LLM: Living the Prompt** (`tomodachi-llm`) | Owner's choice |
+| 10-11 | Release 0.1.1 right after 0.1.0, which is marked superseded | 0.1.0 broke the game's choice menus (found with the owner's other island) |
 | 10-11 | Public domain (The Unlicense) | Giving the work back to the community |
 | 10-11 | The working notes were organized into these docs | One place per kind of information, written for readers rather than as a diary |

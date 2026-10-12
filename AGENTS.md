@@ -4,7 +4,7 @@ This is **Tomodachi LLM: Living the Prompt**, an LLM dialogue mod for *Tomodachi
 - a Skyline plugin (`hook/`, C++), which hooks the game's text function, reports lines and swaps in generated ones
 - a Python bridge (`bridge/`), which asks a local or cloud model for new lines, checks them and sends them back
 
-Release 0.1.0 works on Ryujinx on macOS.
+Release 0.1.1 works on Ryujinx on macOS.
 
 Everything we learned along the way is written down here, so you can study this mod, improve it, or build your own mod for this game. This file says where to start.
 

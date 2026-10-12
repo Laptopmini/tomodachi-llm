@@ -60,6 +60,13 @@ def test_validator_requires_word_when_asked():
     assert validate_line("Garlic Fries rule!", max_chars=80, word="garlic fries", needs_word=True).ok
 
 
+def test_symbols_are_allowed_only_when_the_games_line_has_them():
+    assert not validate_line("♪La la la!♪", max_chars=80).ok
+    assert validate_line("♪La la la!♪", max_chars=80, allow="♪Hm hmm... Yeah...♪").ok
+    assert not validate_line("♪La la 😀♪", max_chars=80, allow="♪Hm hmm♪").ok  # only the symbols it has
+    assert not validate_line("{La}", max_chars=80, allow="{La}").ok  # markup stays forbidden
+
+
 # --- protocol / prompt --------------------------------------------------------------------------
 
 def test_parse_prefetch_sanitizes_context_and_clamps():

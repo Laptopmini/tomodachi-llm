@@ -38,7 +38,9 @@ class Verdict:
     reason: str = ""
 
 
-def validate_line(text: object, *, max_chars: int, word: str | None = None, needs_word: bool = False) -> Verdict:
+def validate_line(text: object, *, max_chars: int, word: str | None = None, needs_word: bool = False,
+                  allow: str = "") -> Verdict:
+    """`allow`: the game's own line; symbols it uses (e.g. ♪ in songs) are allowed in the new one."""
     if not isinstance(text, str):
         return Verdict(False, reason="not a string")
     t = text.strip().strip('"').strip()
@@ -50,7 +52,7 @@ def validate_line(text: object, *, max_chars: int, word: str | None = None, need
         cat = unicodedata.category(ch)
         if cat.startswith("C"):
             return Verdict(False, reason=f"control character U+{ord(ch):04X}")
-        if ord(ch) > 0xFFFF or cat == "So":
+        if (ord(ch) > 0xFFFF or cat == "So") and ch not in allow:
             return Verdict(False, reason=f"symbol or emoji U+{ord(ch):04X}")
         if ch in _FORBIDDEN:
             return Verdict(False, reason=f"forbidden character {ch!r}")

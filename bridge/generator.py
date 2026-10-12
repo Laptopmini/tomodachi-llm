@@ -98,7 +98,8 @@ class Generator:
                 out.failed.append(s.slot_id)
                 out.rejected[s.slot_id] = "missing"
                 continue
-            v = validate_line(by_slot[s.slot_id], max_chars=s.max_chars, word=req.word, needs_word=s.needs_word)
+            v = validate_line(by_slot[s.slot_id], max_chars=s.max_chars, word=req.word, needs_word=s.needs_word,
+                              allow=s.template)
             if v.ok:
                 out.lines.append({"slot_id": s.slot_id, "text": v.text})
             else:

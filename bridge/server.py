@@ -32,7 +32,7 @@ from store import LineStore
 from protocol import MAX_LINE_BYTES, encode, parse_prefetch
 
 log = logging.getLogger("bridge")
-VERSION = "0.7.3"
+VERSION = "0.7.4"
 REFRESH_HISTORY = 3  # earlier generated versions of a line the model is told to avoid
 STORE_SAVE_S = 30.0  # how often the line store is written while lines are being generated
 STALE_OUT_S = 20.0  # out.jsonl untouched this long at bridge start: the game isn't running (a running plugin writes every 5 s)
